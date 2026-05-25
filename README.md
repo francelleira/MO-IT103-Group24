@@ -43,9 +43,9 @@ The program starts with a login screen where the user enters a username and pass
 If the user logs in as employee, they can:
 - Enter their employee number
 - View their employee details, including:
-- Employee Number
-- Employee Name
-- Birthday
+  - Employee Number
+  - Employee Name
+  - Birthday
 
 If the employee number does not exist, the program displays an error message.
 
