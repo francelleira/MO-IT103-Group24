@@ -27,23 +27,30 @@ The program starts with a login screen where the user enters a username and pass
 
 **Available accounts:**
 - Employee
-Username: employee
-Password: 12345
+
+  Username: employee
+  
+  Password: 12345
 
 - Payroll Staff
-Username: payroll_staff
-Password: 12345
+
+  Username: payroll_staff
+  
+  Password: 12345
 
 **Employee Access**
+
 If the user logs in as employee, they can:
 - Enter their employee number
 - View their employee details, including:
 - Employee Number
 - Employee Name
 - Birthday
+
 If the employee number does not exist, the program displays an error message.
 
 **Payroll Staff Access**
+
 If the user logs in as payroll_staff, they can:
 - Process payroll for one employee
 - Process payroll for all employees
