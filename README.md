@@ -81,4 +81,6 @@ Jefferson Viray lr.jviray@mmdc.mcl.edu.ph
 
 Marie Anne Omagap lr.maomagap@mmdc.mcl.edu.ph
 
-Marjorie Mellan Ragot lr.mmragot@mmdc.mcl.edu.ph 
+Marjorie Mellan Ragot lr.mmragot@mmdc.mcl.edu.ph
+
+Charles Darwin Maraña lr.cdmarana@mmdc.mcl.edu.ph
