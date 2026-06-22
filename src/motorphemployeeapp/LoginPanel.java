@@ -14,31 +14,22 @@ import java.awt.event.*;
  */
 public class LoginPanel {
 
-    // ─── Prevent instantiation ────────────────────────────────────────────────
     private LoginPanel() {}
 
-    // ─── Input fields kept at class scope so the handler can read them ────────
-    private static JTextField    txtUsername;
+    private static JTextField     txtUsername;
     private static JPasswordField txtPassword;
-    private static JLabel        lblError;
+    private static JLabel         lblError;
 
-    // ─── Navigation references supplied by MainFrame ──────────────────────────
     private static CardLayout cardLayout;
     private static JPanel     cardPanel;
 
-    // PANEL BUILDER
-    /**
-     * Constructs and returns the fully assembled Login JPanel.
-     */
     public static JPanel build(CardLayout layout, JPanel cards) {
         cardLayout = layout;
         cardPanel  = cards;
 
-        // Outer panel centres the card vertically and horizontally
         JPanel outer = new JPanel(new GridBagLayout());
         outer.setBackground(AppConstants.CLR_BG);
 
-        // Brand strip
         JPanel brand = new JPanel(new FlowLayout(FlowLayout.CENTER));
         brand.setBackground(AppConstants.CLR_BG);
 
@@ -52,9 +43,8 @@ public class LoginPanel {
         tagline.setForeground(AppConstants.CLR_MUTED);
         tagline.setHorizontalAlignment(SwingConstants.CENTER);
 
-        // Login card
         JPanel loginCard = UIComponents.card(new GridBagLayout());
-        loginCard.setPreferredSize(new Dimension(380, 340));
+        loginCard.setPreferredSize(new Dimension(380, 320));
 
         GridBagConstraints gc = new GridBagConstraints();
         gc.insets  = new Insets(6, 0, 6, 0);
@@ -76,10 +66,9 @@ public class LoginPanel {
         JButton btnLogin = UIComponents.primaryBtn("Sign In");
         btnLogin.setPreferredSize(new Dimension(320, 42));
 
-        // ── Event handling ────────────────────────────────────────────────────
         ActionListener loginAction = e -> handleLogin();
         btnLogin.addActionListener(loginAction);
-        txtPassword.addActionListener(loginAction); // Enter key in password field
+        txtPassword.addActionListener(loginAction);
 
         gc.gridx = 0; gc.gridy = 0; loginCard.add(heading,                      gc);
         gc.gridy = 1;               loginCard.add(UIComponents.label("Username"), gc);
@@ -91,7 +80,6 @@ public class LoginPanel {
         gc.insets = new Insets(10, 0, 0, 0);
         loginCard.add(btnLogin, gc);
 
-        // Stack brand + card in a vertical box
         JPanel centre = new JPanel();
         centre.setLayout(new BoxLayout(centre, BoxLayout.Y_AXIS));
         centre.setBackground(AppConstants.CLR_BG);
@@ -110,17 +98,6 @@ public class LoginPanel {
         return outer;
     }
 
-    // EVENT HANDLER
-    /**
-     * Validates the entered credentials and navigates to the correct
-     * screen on success, or shows an inline error on failure.
-     *
-     * Exception handling:
-     *   - Empty fields  → IllegalArgumentException with a descriptive message.
-     *   - Wrong creds   → SecurityException with a descriptive message.
-     * Both are caught and their messages are displayed in lblError so
-     * the program never crashes on bad user input.
-     */
     private static void handleLogin() {
         String user = txtUsername.getText().trim();
         String pass = new String(txtPassword.getPassword()).trim();
@@ -132,11 +109,15 @@ public class LoginPanel {
 
             if (user.equals("employee") && pass.equals("12345")) {
                 lblError.setText(" ");
-                cardLayout.show(cardPanel, "employee");
+                cardLayout.show(cardPanel, MainFrame.CARD_EMPLOYEE);
 
             } else if (user.equals("payroll_staff") && pass.equals("12345")) {
                 lblError.setText(" ");
-                cardLayout.show(cardPanel, "payroll");
+                cardLayout.show(cardPanel, MainFrame.CARD_PAYROLL);
+
+            } else if (user.equals("admin") && pass.equals("12345")) {
+                lblError.setText(" ");
+                cardLayout.show(cardPanel, MainFrame.CARD_ADMIN);
 
             } else {
                 throw new SecurityException("Incorrect username or password.");
@@ -148,16 +129,10 @@ public class LoginPanel {
         }
     }
 
-    // UTILITY – called by other panels when signing out
-    /**
-     * Clears the username/password fields and the error label,
-     * then navigates back to the login card.
-     * Called by EmployeePanel and PayrollPanel on Sign Out.
-     */
     public static void signOut() {
         if (txtUsername != null) txtUsername.setText("");
         if (txtPassword != null) txtPassword.setText("");
         if (lblError    != null) lblError.setText(" ");
-        if (cardLayout  != null) cardLayout.show(cardPanel, "login");
+        if (cardLayout  != null) cardLayout.show(cardPanel, MainFrame.CARD_LOGIN);
     }
 }

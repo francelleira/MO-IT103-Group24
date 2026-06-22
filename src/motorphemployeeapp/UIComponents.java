@@ -11,18 +11,6 @@ import java.awt.*;
  * palette and fonts defined in AppConstants. Every panel that builds
  * its own UI calls these methods instead of configuring components
  * from scratch, ensuring a visually consistent application.
- *
- * Responsibilities:
- *   - Styled JLabel  (section labels)
- *   - Styled JTextField  (form input fields)
- *   - Styled JPasswordField
- *   - Primary (amber fill) JButton
- *   - Ghost (outline) JButton
- *   - Card panel  (rounded surface container)
- *   - Section header panel  (title + subtitle + accent line)
- *   - Monospaced JTextArea  (payroll output)
- *   - Themed JScrollPane
- *   - Error and info dialog helpers
  */
 public class UIComponents {
 
@@ -30,6 +18,7 @@ public class UIComponents {
     private UIComponents() {}
 
     // LABEL
+    // -------------------------------------------------------------------------
     /**
      * Creates a muted, bold field label.
      *
@@ -44,6 +33,7 @@ public class UIComponents {
     }
 
     // INPUT FIELDS
+    // -------------------------------------------------------------------------
     /**
      * Creates a styled single-line text input field.
      *
@@ -81,6 +71,7 @@ public class UIComponents {
     }
 
     // BUTTONS
+    // -------------------------------------------------------------------------
     /**
      * Creates an action button with a rounded
      * custom-painted background that responds to hover and press states.
@@ -207,6 +198,7 @@ public class UIComponents {
     }
 
     // CONTAINERS
+    // -------------------------------------------------------------------------
     /**
      * Creates a card-style panel with a surface background colour,
      * a subtle border, and internal padding.
@@ -260,6 +252,7 @@ public class UIComponents {
     }
 
     // OUTPUT AREA
+    // -------------------------------------------------------------------------
     /**
      * Creates a non-editable monospaced text area suitable for
      * displaying formatted payroll reports.
@@ -295,6 +288,7 @@ public class UIComponents {
     }
 
     // DIALOG HELPERS
+    // -------------------------------------------------------------------------
     /**
      * Shows a modal error dialog.
      *

@@ -22,9 +22,8 @@ public class EmployeePanel {
     private static JTextArea  areaResult;
 
     // PANEL BUILDER
-    /**
-     * Constructs and returns the fully assembled Employee Lookup JPanel.
-     */
+    // -------------------------------------------------------------------------
+    // Constructs and returns the fully assembled Employee Lookup JPanel.
     public static JPanel build() {
         JPanel outer = new JPanel(new BorderLayout(0, 0));
         outer.setBackground(AppConstants.CLR_BG);
@@ -34,9 +33,9 @@ public class EmployeePanel {
         JPanel headerRow = new JPanel(new BorderLayout());
         headerRow.setBackground(AppConstants.CLR_BG);
         headerRow.add(
-            UIComponents.sectionHeader("Employee Details",
-                "View your personal employee details"),
-            BorderLayout.WEST);
+                UIComponents.sectionHeader("Employee Details",
+                        "View your personal employee details"),
+                BorderLayout.WEST);
 
         JButton btnSignOut = UIComponents.ghostBtn("Sign Out");
         btnSignOut.addActionListener(e -> LoginPanel.signOut());
@@ -99,6 +98,7 @@ public class EmployeePanel {
     }
 
     // EVENT HANDLER
+    // -------------------------------------------------------------------------
     /**
      * Validates the entered employee number and displays the matching
      * employee's details if found.
@@ -122,19 +122,19 @@ public class EmployeePanel {
             // Validate: digits only
             if (!raw.matches("\\d+")) {
                 throw new NumberFormatException(
-                    "Employee Number must contain digits only (entered: \"" + raw + "\").");
+                        "Employee Number must contain digits only (entered: \"" + raw + "\").");
             }
 
             // Validate: employee exists
             String[] emp = EmployeeService.findEmployee(raw);
             if (emp == null) {
                 throw new IllegalArgumentException(
-                    "No employee found with number: " + raw);
+                        "No employee found with number: " + raw);
             }
 
             // Build and display result
             String name = emp[AppConstants.COL_FIRST_NAME].trim()
-                        + " " + emp[AppConstants.COL_LAST_NAME].trim();
+                    + " " + emp[AppConstants.COL_LAST_NAME].trim();
 
             StringBuilder sb = new StringBuilder();
             sb.append("\nEMPLOYEE DETAILS\n");
