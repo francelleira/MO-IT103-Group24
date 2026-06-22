@@ -35,7 +35,7 @@ public class DataStore {
             String line;
             while ((line = br.readLine()) != null) {
                 // Split that respects commas inside double-quoted fields
-                String[] row = line.split(",(?=(?:[^\"]*\"[^\"]*\")*[^\"]*$)");
+                String[] row = line.split(",(?=(?:[^\"]*\"[^\"]*\")*[^\"]*$)", -1);
                 employeeData.add(row);
             }
         } catch (IOException e) {
@@ -128,18 +128,30 @@ public class DataStore {
      */
     public static String buildCsvLine(String[] row) {
         StringBuilder sb = new StringBuilder();
+
         for (int i = 0; i < row.length; i++) {
             String field = (row[i] == null) ? "" : row[i].trim();
-            // Wrap in quotes if the field contains a comma
-            if (field.contains(",")) {
-                sb.append("\"").append(field).append("\"");
-            } else {
-                sb.append(field);
+
+            // Remove existing surrounding quotes
+            if (field.startsWith("\"") && field.endsWith("\"")) {
+                field = field.substring(1, field.length() - 1);
             }
+
+            // Escape quotes inside the field
+            field = field.replace("\"", "\"\"");
+
+            // Quote fields containing commas, quotes, or newlines
+            if (field.contains(",") || field.contains("\"") || field.contains("\n")) {
+                field = "\"" + field + "\"";
+            }
+
+            sb.append(field);
+
             if (i < row.length - 1) {
                 sb.append(",");
             }
         }
+
         return sb.toString();
     }
 }
