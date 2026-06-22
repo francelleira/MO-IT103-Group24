@@ -1,7 +1,7 @@
 # Group 24 - MotorPH Employee Application
 
 ## Project Overview
-This repository contains the source code and documentation for the MotorPH Employee Application, developed as part of the IT103 course requirements. 
+This repository contains the source code and documentation for the MotorPH Employee Application, developed as part of the IT103 course requirements. The application streamlines employee record management, attendance tracking, and payroll processing through a role-based interface.
 
 ### Milestone 1: MotorPH Employee App GUI Development and Interface
 Milestone 1 focuses on designing and implementing a clean, user-friendly Graphical User Interface (GUI) to handle employee details, calculations, and record management effectively.
@@ -38,6 +38,12 @@ The program starts with a login screen where the user enters a username and pass
   
   Password: 12345
 
+- Admin
+
+  Username: admin
+
+  Password: 12345
+
 **Employee Access**
 
 If the user logs in as employee, they can:
@@ -61,11 +67,33 @@ The system calculates:
 - Government Deductions
 - Net Salary
 
+**Admin Access**
+
+If the user logs in as admin, they can:
+- View all employee records
+- Add new employees
+- Edit existing employee records
+- Delete employee records
+
 **Files Used**
 - Employee Data File: MotorPH_Employee_Details.csv
 - Attendance File: Attendance_Record.csv
 
 These files contain employee information and attendance records used by the program.
+
+**Generated Files**
+- Payroll_Report.csv
+
+This file contains the summary of the automated payroll calculation.
+
+---
+
+## Running the Application
+
+1. Clone or download this repository.
+2. Ensure that the required CSV files are located in the application's root directory.
+3. Open the project in your preferred Java IDE (such as IntelliJ IDEA or NetBeans).
+4. Build and run the Main.java file.
 
 ---
 
