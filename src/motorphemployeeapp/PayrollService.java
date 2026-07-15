@@ -284,4 +284,95 @@ public class PayrollService {
         if (value.contains(",")) return "\"" + value + "\"";
         return value;
     }
+
+    // PAYROLL SUMMARY
+    // -------------------------------------------------------------------------
+    /** Holds the aggregate figures produced by {@link #generateSummary(int)}. */
+    public static class PayrollSummary {
+        public int    employeeCount;
+        public double totalGrossPay;
+        public double totalDeductions;
+        public double averageNetPay;
+    }
+
+    /**
+     * Computes payroll totals across every employee currently loaded from
+     * the CSV file, for the given month range.
+     *
+     * Reuses the same gross-pay and deduction methods used elsewhere in
+     * this class ({@link #calculateGrossSalary}, {@link #computeSSS},
+     * {@link #computePhilHealth}, {@link #computePagIBIG},
+     * {@link #computeTax}, {@link #computeDeductions}) so the summary
+     * always stays consistent with individual payslips.
+     *
+     * @param monthPairIdx  0-based month index, or -1 for all months (June–December).
+     * @throws IllegalStateException if no employee data is currently loaded.
+     */
+    public static PayrollSummary generateSummary(int monthPairIdx) throws Exception {
+        ArrayList<String> allNums = EmployeeService.getAllEmployeeNumbers();
+
+        if (allNums.isEmpty()) {
+            throw new IllegalStateException(
+                    "No employee data is currently loaded. Please make sure the "
+                            + "employee CSV file has been loaded before generating a summary.");
+        }
+
+        int startI = (monthPairIdx < 0) ? 0 : monthPairIdx * 2;
+        int endI   = (monthPairIdx < 0)
+                ? AppConstants.CUTOFF_START.length - 1
+                : Math.min(monthPairIdx * 2 + 1, AppConstants.CUTOFF_START.length - 1);
+
+        double totalGross      = 0;
+        double totalDeductions = 0;
+        double totalNet        = 0;
+
+        for (String num : allNums) {
+            for (int i = startI; i <= endI; i += 2) {
+                String s1 = AppConstants.CUTOFF_START[i];
+                String e1 = AppConstants.CUTOFF_END[i];
+                String s2 = AppConstants.CUTOFF_START[i + 1];
+                String e2 = AppConstants.CUTOFF_END[i + 1];
+
+                double h1 = AttendanceService.calculateHours(num, s1, e1);
+                double h2 = AttendanceService.calculateHours(num, s2, e2);
+                double g1 = calculateGrossSalary(num, h1);
+                double g2 = calculateGrossSalary(num, h2);
+                double mg = calculateMonthlyGross(g1, g2);
+
+                double sss      = computeSSS(mg);
+                double ph       = computePhilHealth(mg);
+                double pi       = computePagIBIG(mg);
+                double taxable  = computeTaxableIncome(mg, sss, ph, pi);
+                double tax      = computeTax(taxable);
+                double totalDed = computeDeductions(sss, ph, pi, tax);
+                double net2     = g2 - totalDed;
+
+                // 1st cutoff has no deductions; 2nd cutoff carries full deductions,
+                // matching the rule already used by buildPayrollText/writePayrollCsv.
+                totalGross      += (g1 + g2);
+                totalDeductions += totalDed;
+                totalNet        += (g1 + net2);
+            }
+        }
+
+        PayrollSummary summary = new PayrollSummary();
+        summary.employeeCount   = allNums.size();
+        summary.totalGrossPay   = totalGross;
+        summary.totalDeductions = totalDeductions;
+        summary.averageNetPay   = totalNet / allNums.size();
+        return summary;
+    }
+
+    /** Formats a {@link PayrollSummary} into a display-ready block of text. */
+    public static String buildSummaryText(PayrollSummary s) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("╔══════════════════════════════════════════╗\n");
+        sb.append(String.format("║  %-40s║%n", "PAYROLL SUMMARY"));
+        sb.append("╚══════════════════════════════════════════╝\n\n");
+        sb.append(String.format("%-22s : %d%n",       "Total Employees",   s.employeeCount));
+        sb.append(String.format("%-22s : PHP %,.2f%n", "Total Gross Pay",   s.totalGrossPay));
+        sb.append(String.format("%-22s : PHP %,.2f%n", "Total Deductions",  s.totalDeductions));
+        sb.append(String.format("%-22s : PHP %,.2f%n", "Average Net Pay",   s.averageNetPay));
+        return sb.toString();
+    }
 }

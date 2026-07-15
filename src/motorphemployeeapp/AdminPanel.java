@@ -3,11 +3,8 @@ package motorphemployeeapp;
 import javax.swing.*;
 import javax.swing.border.*;
 import javax.swing.table.*;
-import javax.swing.event.*;
 import java.awt.*;
-import java.awt.event.*;
-import java.io.*;
-import java.nio.file.*;
+import java.io.IOException;
 import java.util.ArrayList;
 
 /**
@@ -16,39 +13,22 @@ import java.util.ArrayList;
  * HR/Admin screen with:
  *   - Full-screen JTable of employee records.
  *   - "Add Employee" button in the header row (left of Sign Out).
- *   - "Edit Record" button in the header row (only active when a row is selected).
+ *   - "Edit Record" button in the header row — always clickable. Clicking
+ *     it opens a small number-entry panel where the admin types the
+ *     Employee Number to edit; once validated, the full edit form loads.
  *   - Add-Employee form panel (CardLayout overlay, not below the table).
  *   - Edit-Employee form panel with Save Changes, Delete Record, Clear Form, Back.
- *   - No salary computation panel (moved to PayrollPanel for payroll staff).
- *   - Dynamic table refresh via WatchService on the CSV file.
+ *   - Dynamic table refresh via a CSV file watcher.
  *   - Auto-generated sequential employee numbers.
  *   - Full input validation with JOptionPane error dialogs.
+ *
+ * All business logic (validation, CRUD orchestration, table-data
+ * preparation, file watching) lives in {@link AdminService}. This class
+ * is responsible only for building the Swing UI and wiring events to it.
  */
 public class AdminPanel {
 
     private AdminPanel() {}
-
-    // Column definitions
-    // -------------------------------------------------------------------------
-    private static final String[] TABLE_COLUMNS = {
-            "Emp #", "Last Name", "First Name", "Birthday",
-            "SSS #", "PhilHealth #", "TIN #", "Pag-IBIG #",
-            "Status", "Position", "Hourly Rate"
-    };
-
-    private static final int[] DATA_COL_MAP = {
-            AppConstants.COL_EMP_NUM,
-            AppConstants.COL_LAST_NAME,
-            AppConstants.COL_FIRST_NAME,
-            AppConstants.COL_BIRTHDAY,
-            AppConstants.COL_SSS,
-            AppConstants.COL_PHILHEALTH,
-            AppConstants.COL_TIN,
-            AppConstants.COL_PAGIBIG,
-            AppConstants.COL_STATUS,
-            AppConstants.COL_POSITION,
-            AppConstants.COL_HOURLY_RATE
-    };
 
     // Component references
     // -------------------------------------------------------------------------
@@ -60,13 +40,22 @@ public class AdminPanel {
     private static JPanel     mainCardPanel;
 
     // Card names
-    private static final String CARD_TABLE    = "TABLE";
-    private static final String CARD_ADD_FORM = "ADD_FORM";
-    private static final String CARD_EDIT_FORM = "EDIT_FORM";
+    private static final String CARD_TABLE       = "TABLE";
+    private static final String CARD_ADD_FORM    = "ADD_FORM";
+    private static final String CARD_EDIT_LOOKUP = "EDIT_LOOKUP";
+    private static final String CARD_EDIT_FORM   = "EDIT_FORM";
 
-    // Header buttons (need references to enable/disable)
+    // Header buttons
     private static JButton btnAddEmployee;
     private static JButton btnEditRecord;
+
+    // Remembers the last row selected in the table, purely as a convenience
+    // to pre-fill the Edit Record number-entry field. Selection no longer
+    // gates whether Edit Record can be clicked.
+    private static String selectedEmpNum;
+
+    // Edit-lookup form field
+    private static JTextField editLookupTxtEmpNum;
 
     // Add-form fields
     private static JTextField addTxtEmpNum;
@@ -110,9 +99,6 @@ public class AdminPanel {
     private static JTextField editTxtGrossSemiMonthly;
     private static JTextField editTxtHourlyRate;
 
-    // File watcher thread
-    private static Thread watchThread;
-
     // PANEL BUILDER
     // -------------------------------------------------------------------------
     public static JPanel build() {
@@ -129,9 +115,10 @@ public class AdminPanel {
         mainCardPanel  = new JPanel(mainCardLayout);
         mainCardPanel.setBackground(AppConstants.CLR_BG);
 
-        mainCardPanel.add(buildTableCard(),   CARD_TABLE);
-        mainCardPanel.add(buildAddFormCard(), CARD_ADD_FORM);
-        mainCardPanel.add(buildEditFormCard(), CARD_EDIT_FORM);
+        mainCardPanel.add(buildTableCard(),      CARD_TABLE);
+        mainCardPanel.add(buildAddFormCard(),    CARD_ADD_FORM);
+        mainCardPanel.add(buildEditLookupCard(), CARD_EDIT_LOOKUP);
+        mainCardPanel.add(buildEditFormCard(),   CARD_EDIT_FORM);
 
         outer.add(mainCardPanel, BorderLayout.CENTER);
 
@@ -139,7 +126,7 @@ public class AdminPanel {
         refreshTable();
 
         // Start file-watcher for dynamic refresh
-        startFileWatcher();
+        AdminService.startFileWatcher(AdminPanel::refreshTable);
 
         return outer;
     }
@@ -159,16 +146,17 @@ public class AdminPanel {
         // Right side: Add Employee | Edit Record | Sign Out
         btnAddEmployee = UIComponents.primaryBtn("Add Employee");
         btnEditRecord  = UIComponents.ghostBtn("Edit Record");
-        btnEditRecord.setEnabled(false); // enabled only when a row is selected
+        // Edit Record is always clickable — it no longer requires a table
+        // selection. Clicking it opens the employee-number lookup panel.
 
         JButton btnSignOut = UIComponents.ghostBtn("Sign Out");
         btnSignOut.addActionListener(e -> {
-            stopFileWatcher();
+            AdminService.stopFileWatcher();
             LoginPanel.signOut();
         });
 
         btnAddEmployee.addActionListener(e -> showAddForm());
-        btnEditRecord.addActionListener(e -> showEditForm());
+        btnEditRecord.addActionListener(e -> showEditLookupForm());
 
         JPanel btnWrap = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
         btnWrap.setBackground(AppConstants.CLR_BG);
@@ -186,7 +174,7 @@ public class AdminPanel {
         JPanel tableCard = new JPanel(new BorderLayout());
         tableCard.setBackground(AppConstants.CLR_BG);
 
-        tableModel = new DefaultTableModel(TABLE_COLUMNS, 0) {
+        tableModel = new DefaultTableModel(AdminService.TABLE_COLUMNS, 0) {
             @Override
             public boolean isCellEditable(int row, int col) { return false; }
         };
@@ -206,14 +194,14 @@ public class AdminPanel {
         empTable.setAutoResizeMode(JTable.AUTO_RESIZE_ALL_COLUMNS);
 
         JScrollPane tableSP = UIComponents.scrollPane(empTable);
-
         tableCard.add(tableSP, BorderLayout.CENTER);
 
-        // Enable Edit Record button when a row is selected
+        // Remember the selected employee number purely to pre-fill the
+        // Edit Record number-entry field as a convenience.
         empTable.getSelectionModel().addListSelectionListener(e -> {
             if (!e.getValueIsAdjusting()) {
-                boolean hasSelection = empTable.getSelectedRow() >= 0;
-                btnEditRecord.setEnabled(hasSelection);
+                int row = empTable.getSelectedRow();
+                selectedEmpNum = (row >= 0) ? (String) tableModel.getValueAt(row, 0) : null;
             }
         });
 
@@ -241,27 +229,27 @@ public class AdminPanel {
         addTxtEmpNum           = addLabeledField(fields, "Employee # (auto)");
         addTxtLastName         = addLabeledField(fields, "Last Name *");
         addTxtFirstName        = addLabeledField(fields, "First Name *");
-        addTxtBirthday         = addLabeledField(fields, "Birthday (MM/DD/YYYY)");
-        addTxtSSS              = addLabeledField(fields, "SSS #");
-        addTxtPhilHealth       = addLabeledField(fields, "PhilHealth #");
-        addTxtTIN              = addLabeledField(fields, "TIN #");
-        addTxtPagIBIG          = addLabeledField(fields, "Pag-IBIG #");
-        addTxtStatus           = addLabeledField(fields, "Status");
-        addTxtPosition         = addLabeledField(fields, "Position");
-        addTxtSupervisor       = addLabeledField(fields, "Supervisor");
-        addTxtPhone            = addLabeledField(fields, "Phone Number");
-        addTxtAddress          = addLabeledField(fields, "Address");
-        addTxtBasicSalary      = addLabeledField(fields, "Basic Salary");
+        addTxtBirthday         = addLabeledField(fields, "Birthday (MM/DD/YYYY) *");
+        addTxtSSS              = addLabeledField(fields, "SSS # *");
+        addTxtPhilHealth       = addLabeledField(fields, "PhilHealth # *");
+        addTxtTIN              = addLabeledField(fields, "TIN # *");
+        addTxtPagIBIG          = addLabeledField(fields, "Pag-IBIG # *");
+        addTxtStatus           = addLabeledField(fields, "Status *");
+        addTxtPosition         = addLabeledField(fields, "Position *");
+        addTxtSupervisor       = addLabeledField(fields, "Supervisor *");
+        addTxtPhone            = addLabeledField(fields, "Phone Number *");
+        addTxtAddress          = addLabeledField(fields, "Address *");
+        addTxtBasicSalary      = addLabeledField(fields, "Basic Salary *");
         addTxtRiceSubsidy      = addLabeledField(fields, "Rice Subsidy");
         addTxtPhoneAllowance   = addLabeledField(fields, "Phone Allowance");
         addTxtClothingAllowance = addLabeledField(fields, "Clothing Allowance");
-        addTxtGrossSemiMonthly = addLabeledField(fields, "Gross Semi-monthly");
+        addTxtGrossSemiMonthly = addLabeledField(fields, "Gross Semi-monthly *");
         addTxtHourlyRate       = addLabeledField(fields, "Hourly Rate *");
-        // Filler cells to keep grid even (19 fields × 2 cols = 38, next multiple of 4 = 40, need 2 more)
+        // Filler cells to keep grid even (19 fields x 2 cols = 38, next multiple of 4 = 40, need 2 more)
         fields.add(new JLabel(""));
         fields.add(new JLabel(""));
 
-        // Auto-fill employee number (read-only — user cannot change it)
+        // Auto-fill employee number (read-only -- user cannot change it)
         addTxtEmpNum.setEditable(false);
         addTxtEmpNum.setBackground(AppConstants.CLR_SURFACE);
 
@@ -287,6 +275,58 @@ public class AdminPanel {
         return formCard;
     }
 
+    // EDIT-RECORD NUMBER-ENTRY LOOKUP CARD
+    // -------------------------------------------------------------------------
+    /**
+     * Small panel shown when Edit Record is clicked. The admin types the
+     * Employee Number to edit here; once validated, the full Edit form
+     * is populated and shown.
+     */
+    private static JPanel buildEditLookupCard() {
+        JPanel outer = new JPanel(new GridBagLayout());
+        outer.setBackground(AppConstants.CLR_BG);
+
+        JPanel card = UIComponents.card(new GridBagLayout());
+        card.setPreferredSize(new Dimension(420, 230));
+
+        GridBagConstraints gc = new GridBagConstraints();
+        gc.insets  = new Insets(6, 0, 6, 0);
+        gc.fill    = GridBagConstraints.HORIZONTAL;
+        gc.weightx = 1;
+
+        JLabel heading = new JLabel("Edit Employee Record");
+        heading.setFont(AppConstants.FONT_CARD_H);
+        heading.setForeground(AppConstants.CLR_TEXT);
+
+        JLabel instructions = new JLabel("Enter the Employee Number to edit:");
+        instructions.setFont(AppConstants.FONT_SMALL);
+        instructions.setForeground(AppConstants.CLR_MUTED);
+
+        editLookupTxtEmpNum = UIComponents.inputField();
+        editLookupTxtEmpNum.setToolTipText("Enter numeric employee ID (e.g. 10001)");
+
+        JButton btnContinue = UIComponents.primaryBtn("Continue");
+        JButton btnBack     = UIComponents.ghostBtn("Back");
+
+        btnContinue.addActionListener(e -> handleEditLookupContinue());
+        editLookupTxtEmpNum.addActionListener(e -> handleEditLookupContinue()); // Enter key shortcut
+        btnBack.addActionListener(e -> showTableView());
+
+        JPanel btnRow = new JPanel(new GridLayout(1, 2, 8, 0));
+        btnRow.setBackground(AppConstants.CLR_SURFACE);
+        btnRow.add(btnContinue);
+        btnRow.add(btnBack);
+
+        gc.gridx = 0; gc.gridy = 0; card.add(heading, gc);
+        gc.gridy = 1; card.add(instructions, gc);
+        gc.gridy = 2; card.add(editLookupTxtEmpNum, gc);
+        gc.gridy = 3; gc.insets = new Insets(14, 0, 0, 0);
+        card.add(btnRow, gc);
+
+        outer.add(card);
+        return outer;
+    }
+
     // EDIT EMPLOYEE FORM CARD
     // -------------------------------------------------------------------------
     private static JPanel buildEditFormCard() {
@@ -306,21 +346,21 @@ public class AdminPanel {
         editTxtEmpNum           = addLabeledField(fields, "Employee #");
         editTxtLastName         = addLabeledField(fields, "Last Name *");
         editTxtFirstName        = addLabeledField(fields, "First Name *");
-        editTxtBirthday         = addLabeledField(fields, "Birthday (MM/DD/YYYY)");
-        editTxtSSS              = addLabeledField(fields, "SSS #");
-        editTxtPhilHealth       = addLabeledField(fields, "PhilHealth #");
-        editTxtTIN              = addLabeledField(fields, "TIN #");
-        editTxtPagIBIG          = addLabeledField(fields, "Pag-IBIG #");
-        editTxtStatus           = addLabeledField(fields, "Status");
-        editTxtPosition         = addLabeledField(fields, "Position");
-        editTxtSupervisor       = addLabeledField(fields, "Supervisor");
-        editTxtPhone            = addLabeledField(fields, "Phone Number");
-        editTxtAddress          = addLabeledField(fields, "Address");
-        editTxtBasicSalary      = addLabeledField(fields, "Basic Salary");
+        editTxtBirthday         = addLabeledField(fields, "Birthday (MM/DD/YYYY) *");
+        editTxtSSS              = addLabeledField(fields, "SSS # *");
+        editTxtPhilHealth       = addLabeledField(fields, "PhilHealth # *");
+        editTxtTIN              = addLabeledField(fields, "TIN # *");
+        editTxtPagIBIG          = addLabeledField(fields, "Pag-IBIG # *");
+        editTxtStatus           = addLabeledField(fields, "Status *");
+        editTxtPosition         = addLabeledField(fields, "Position *");
+        editTxtSupervisor       = addLabeledField(fields, "Supervisor *");
+        editTxtPhone            = addLabeledField(fields, "Phone Number *");
+        editTxtAddress          = addLabeledField(fields, "Address *");
+        editTxtBasicSalary      = addLabeledField(fields, "Basic Salary *");
         editTxtRiceSubsidy      = addLabeledField(fields, "Rice Subsidy");
         editTxtPhoneAllowance   = addLabeledField(fields, "Phone Allowance");
         editTxtClothingAllowance = addLabeledField(fields, "Clothing Allowance");
-        editTxtGrossSemiMonthly = addLabeledField(fields, "Gross Semi-monthly");
+        editTxtGrossSemiMonthly = addLabeledField(fields, "Gross Semi-monthly *");
         editTxtHourlyRate       = addLabeledField(fields, "Hourly Rate *");
         fields.add(new JLabel(""));
         fields.add(new JLabel(""));
@@ -362,41 +402,44 @@ public class AdminPanel {
     /** Switch to the table view. */
     private static void showTableView() {
         btnAddEmployee.setEnabled(true);
-        // Re-evaluate Edit Record button state based on table selection
-        btnEditRecord.setEnabled(empTable.getSelectedRow() >= 0);
+        btnEditRecord.setEnabled(true);
         mainCardLayout.show(mainCardPanel, CARD_TABLE);
     }
 
     /** Switch to the Add Employee form, pre-filling the auto-generated employee number. */
     private static void showAddForm() {
         clearAddForm();
-        // Auto-generate the next sequential employee number
-        addTxtEmpNum.setText(EmployeeService.getNextEmployeeNumber());
+        addTxtEmpNum.setText(AdminService.getNextEmployeeNumber());
         btnAddEmployee.setEnabled(false);
         btnEditRecord.setEnabled(false);
         mainCardLayout.show(mainCardPanel, CARD_ADD_FORM);
     }
 
-    /** Switch to the Edit form, pre-populating it from the selected table row. */
-    private static void showEditForm() {
-        int selectedRow = empTable.getSelectedRow();
-        if (selectedRow < 0) {
-            UIComponents.showError(null, "Please select an employee row from the table first.");
-            return;
-        }
-
-        String empNum = (String) tableModel.getValueAt(selectedRow, 0);
-        String[] row  = EmployeeService.findEmployee(empNum);
-
-        if (row == null) {
-            UIComponents.showError(null, "Could not load employee record for #" + empNum);
-            return;
-        }
-
-        populateEditForm(row);
+    /**
+     * Switch to the Edit Record number-entry lookup panel. Edit Record is
+     * always clickable; if a row happens to be selected in the table, its
+     * Employee Number is pre-filled as a convenience, but the admin can
+     * type any number.
+     */
+    private static void showEditLookupForm() {
+        editLookupTxtEmpNum.setText(selectedEmpNum != null ? selectedEmpNum : "");
         btnAddEmployee.setEnabled(false);
         btnEditRecord.setEnabled(false);
-        mainCardLayout.show(mainCardPanel, CARD_EDIT_FORM);
+        mainCardLayout.show(mainCardPanel, CARD_EDIT_LOOKUP);
+    }
+
+    /**
+     * Validates the employee number typed into the lookup panel and, if
+     * found, loads the full Edit form pre-populated with that employee's data.
+     */
+    private static void handleEditLookupContinue() {
+        try {
+            String[] row = AdminService.findEmployeeForEdit(editLookupTxtEmpNum.getText());
+            populateEditForm(row);
+            mainCardLayout.show(mainCardPanel, CARD_EDIT_FORM);
+        } catch (IllegalArgumentException ex) {
+            UIComponents.showError(null, ex.getMessage());
+        }
     }
 
     // ADD EMPLOYEE HANDLER
@@ -405,11 +448,11 @@ public class AdminPanel {
         String[] row = buildRowFromAddForm();
 
         try {
-            EmployeeService.addEmployee(row);
+            AdminService.addEmployee(row);
             refreshTable();
             clearAddForm();
             // Generate next number for the next potential add
-            addTxtEmpNum.setText(EmployeeService.getNextEmployeeNumber());
+            addTxtEmpNum.setText(AdminService.getNextEmployeeNumber());
             JOptionPane.showMessageDialog(null,
                     "Employee " + row[AppConstants.COL_EMP_NUM] + " added successfully.",
                     "Success", JOptionPane.INFORMATION_MESSAGE);
@@ -424,24 +467,10 @@ public class AdminPanel {
     // SAVE CHANGES HANDLER
     // -------------------------------------------------------------------------
     private static void handleSaveChanges() {
-        // Validate required fields before building the row
-        if (editTxtLastName.getText().trim().isEmpty()) {
-            UIComponents.showError(null, "Validation Error:\nLast Name cannot be empty.");
-            return;
-        }
-        if (editTxtFirstName.getText().trim().isEmpty()) {
-            UIComponents.showError(null, "Validation Error:\nFirst Name cannot be empty.");
-            return;
-        }
-        if (editTxtHourlyRate.getText().trim().isEmpty()) {
-            UIComponents.showError(null, "Validation Error:\nHourly Rate cannot be empty.");
-            return;
-        }
-
         String[] row = buildRowFromEditForm();
 
         try {
-            EmployeeService.updateEmployee(row);
+            AdminService.updateEmployee(row);
             refreshTable();
             JOptionPane.showMessageDialog(null,
                     "Employee " + row[AppConstants.COL_EMP_NUM] + " updated successfully.",
@@ -477,7 +506,7 @@ public class AdminPanel {
         if (choice != JOptionPane.YES_OPTION) return;
 
         try {
-            EmployeeService.deleteEmployee(empNum);
+            AdminService.deleteEmployee(empNum);
             refreshTable();
             showTableView();
             JOptionPane.showMessageDialog(null,
@@ -494,7 +523,7 @@ public class AdminPanel {
     // TABLE REFRESH
     // -------------------------------------------------------------------------
     /**
-     * Clears and repopulates the JTable from DataStore.
+     * Clears and repopulates the JTable from AdminService's prepared data.
      * Safe to call from any thread (uses SwingUtilities.invokeLater).
      */
     public static void refreshTable() {
@@ -504,82 +533,28 @@ public class AdminPanel {
         }
 
         // Remember the currently selected employee number so we can restore it
-        String selectedEmpNum = null;
+        String currentSelection = null;
         int selectedRow = empTable != null ? empTable.getSelectedRow() : -1;
         if (selectedRow >= 0 && tableModel != null) {
             Object val = tableModel.getValueAt(selectedRow, 0);
-            if (val != null) selectedEmpNum = val.toString();
+            if (val != null) currentSelection = val.toString();
         }
 
         tableModel.setRowCount(0);
 
-        ArrayList<String[]> data = DataStore.getEmployeeData();
-        for (String[] row : data) {
-            String[] displayRow = new String[TABLE_COLUMNS.length];
-            for (int col = 0; col < TABLE_COLUMNS.length; col++) {
-                int csvCol = DATA_COL_MAP[col];
-                displayRow[col] = (csvCol < row.length)
-                        ? row[csvCol].replace("\"", "").trim()
-                        : "";
-            }
+        ArrayList<String[]> displayRows = AdminService.getDisplayRows();
+        for (String[] displayRow : displayRows) {
             tableModel.addRow(displayRow);
         }
 
         // Restore selection if the employee still exists
-        if (selectedEmpNum != null) {
+        if (currentSelection != null) {
             for (int r = 0; r < tableModel.getRowCount(); r++) {
-                if (selectedEmpNum.equals(tableModel.getValueAt(r, 0))) {
+                if (currentSelection.equals(tableModel.getValueAt(r, 0))) {
                     empTable.setRowSelectionInterval(r, r);
                     break;
                 }
             }
-        }
-    }
-
-    // FILE WATCHER  (dynamic table refresh when CSV changes on disk)
-    // -------------------------------------------------------------------------
-    private static void startFileWatcher() {
-        stopFileWatcher();
-        watchThread = new Thread(() -> {
-            try {
-                Path dir  = Paths.get(AppConstants.EMPLOYEE_FILE).toAbsolutePath().getParent();
-                Path file = Paths.get(AppConstants.EMPLOYEE_FILE).toAbsolutePath().getFileName();
-
-                WatchService watcher = FileSystems.getDefault().newWatchService();
-                dir.register(watcher, StandardWatchEventKinds.ENTRY_MODIFY);
-
-                while (!Thread.currentThread().isInterrupted()) {
-                    WatchKey key;
-                    try {
-                        key = watcher.take();
-                    } catch (InterruptedException ex) {
-                        Thread.currentThread().interrupt();
-                        break;
-                    }
-
-                    for (WatchEvent<?> event : key.pollEvents()) {
-                        if (event.context() instanceof Path &&
-                                file.equals(event.context())) {
-                            // Small delay to ensure the write is complete
-                            Thread.sleep(200);
-                            DataStore.loadEmployeeData();
-                            refreshTable();
-                        }
-                    }
-                    key.reset();
-                }
-                watcher.close();
-            } catch (Exception e) {
-                // Watcher stopped — non-fatal
-            }
-        }, "EmployeeFileWatcher");
-        watchThread.setDaemon(true);
-        watchThread.start();
-    }
-
-    private static void stopFileWatcher() {
-        if (watchThread != null && watchThread.isAlive()) {
-            watchThread.interrupt();
         }
     }
 
@@ -630,7 +605,7 @@ public class AdminPanel {
     }
 
     private static void clearEditForm() {
-        // Preserve the employee number (key field) — only clear editable fields
+        // Preserve the employee number (key field) -- only clear editable fields
         editTxtLastName.setText("");
         editTxtFirstName.setText("");
         editTxtBirthday.setText("");

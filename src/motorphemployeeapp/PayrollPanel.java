@@ -93,12 +93,14 @@ public class PayrollPanel {
         // Row 5: buttons
         JButton btnProcess = UIComponents.primaryBtn("Process Payroll");
         JButton btnAll     = UIComponents.ghostBtn("All Employees");
+        JButton btnSummary = UIComponents.ghostBtn("Generate Summary");
         JButton btnClear   = UIComponents.ghostBtn("Clear");
 
-        JPanel btnRow = new JPanel(new GridLayout(1, 3, 8, 0));
+        JPanel btnRow = new JPanel(new GridLayout(1, 4, 8, 0));
         btnRow.setBackground(AppConstants.CLR_SURFACE);
         btnRow.add(btnProcess);
         btnRow.add(btnAll);
+        btnRow.add(btnSummary);
         btnRow.add(btnClear);
 
         gc.gridy = 5; gc.gridx = 0; gc.gridwidth = 2; gc.weightx = 1.0;
@@ -118,6 +120,7 @@ public class PayrollPanel {
         // Wire events
         btnProcess.addActionListener(e -> handleProcessPayroll(false));
         btnAll.addActionListener(e -> handleProcessPayroll(true));
+        btnSummary.addActionListener(e -> handleGenerateSummary());
         btnClear.addActionListener(e -> clearForm());
 
         // Result area
@@ -229,6 +232,43 @@ public class PayrollPanel {
             setStatus("✘  Number format error.", AppConstants.CLR_DANGER);
         } catch (IllegalArgumentException ex) {
             UIComponents.showError(null, "Validation Error:\n" + ex.getMessage());
+            setStatus("✘  " + ex.getMessage(), AppConstants.CLR_DANGER);
+        } catch (Exception ex) {
+            UIComponents.showError(null, "Unexpected error:\n" + ex.getMessage());
+            setStatus("✘  Unexpected error.", AppConstants.CLR_DANGER);
+        }
+    }
+
+    // PAYROLL SUMMARY HANDLER
+    // -------------------------------------------------------------------------
+    /**
+     * Computes and displays a summary of all employees' payroll data:
+     * total employee count, total gross pay, total deductions, and
+     * average net pay. Validation ensures the computation only runs
+     * when employee data has actually been loaded.
+     */
+    private static void handleGenerateSummary() {
+        setStatus("Generating summary…", AppConstants.CLR_MUTED);
+
+        try {
+            if (DataStore.getEmployeeData().isEmpty()) {
+                throw new IllegalStateException(
+                        "No employee data is currently loaded. Please make sure the "
+                                + "employee CSV file has been loaded before generating a summary.");
+            }
+
+            PayrollService.PayrollSummary summary = PayrollService.generateSummary(-1);
+            String summaryText = PayrollService.buildSummaryText(summary);
+
+            areaResult.setText(summaryText);
+            setStatus("✔  Summary generated for " + summary.employeeCount + " employees.",
+                    AppConstants.CLR_SUCCESS);
+
+            JOptionPane.showMessageDialog(null, summaryText,
+                    "Payroll Summary", JOptionPane.INFORMATION_MESSAGE);
+
+        } catch (IllegalStateException ex) {
+            UIComponents.showError(null, ex.getMessage());
             setStatus("✘  " + ex.getMessage(), AppConstants.CLR_DANGER);
         } catch (Exception ex) {
             UIComponents.showError(null, "Unexpected error:\n" + ex.getMessage());
