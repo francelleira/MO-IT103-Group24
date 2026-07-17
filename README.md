@@ -1,17 +1,14 @@
 # Group 24 - MotorPH Employee Application
 
-## Project Overview
+## Terminal Assessment: Finalized MotorPH Employee Application
 This repository contains the source code and documentation for the MotorPH Employee Application, developed as part of the IT103 course requirements. The application streamlines employee record management, attendance tracking, and payroll processing through a role-based interface.
-
-### Milestone 1: MotorPH Employee App GUI Development and Interface
-Milestone 1 focuses on designing and implementing a clean, user-friendly Graphical User Interface (GUI) to handle employee details, calculations, and record management effectively.
 
 ---
 
 ## **Program details**
 The MotorPH Payroll System is a Java program that calculates employee payroll using employee information and attendance records.
 The program reads data from CSV files and performs the following tasks:
-- Displays employee information (Employee Number, Name, Birthday)
+- Displays all employee information
 - Calculates total hours worked
 - Calculates gross salary based on hourly rate
 - Calculates deductions (SSS, PhilHealth, Pag-IBIG, Tax)
@@ -52,6 +49,7 @@ If the user logs in as employee, they can:
   - Employee Number
   - Employee Name
   - Birthday
+- View their payslip
 
 If the employee number does not exist, the program displays an error message.
 
@@ -60,6 +58,7 @@ If the employee number does not exist, the program displays an error message.
 If the user logs in as payroll_staff, they can:
 - Process payroll for one employee
 - Process payroll for all employees
+- Generate payroll summary
 
 The system calculates:
 - Total Hours Worked
@@ -102,7 +101,7 @@ Homework 1 Docs:(https://docs.google.com/spreadsheets/d/15dP33snFRs8yTzUYBFgnr9r
 
 ---
 
-## Group Members & Contributions
+## Group Members
 France Arielle Plandaño lr.faplandano@mmdc.mcl.edu.ph
 
 Jefferson Viray lr.jviray@mmdc.mcl.edu.ph
