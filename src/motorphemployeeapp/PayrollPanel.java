@@ -9,8 +9,9 @@ import java.util.ArrayList;
 /**
  * PayrollPanel
  *
- * Builds and owns the Payroll Processing screen shown after a
- * successful payroll_staff login.
+ * Builds the Payroll Processing screen that payroll staff see after
+ * logging in. Lets them compute one employee's payroll, compute
+ * payroll for everyone, or generate a payroll summary.
  */
 public class PayrollPanel {
 
@@ -140,6 +141,8 @@ public class PayrollPanel {
 
     // EVENT HANDLERS
     // -------------------------------------------------------------------------
+    // Runs when "Process Payroll" or "All Employees" is clicked. Validates
+    // the form, computes payroll, shows the result, and saves a CSV file.
     private static void handleProcessPayroll(boolean allEmployees) {
         areaResult.setText("");
         setStatus("Processing…", AppConstants.CLR_MUTED);
@@ -241,12 +244,9 @@ public class PayrollPanel {
 
     // PAYROLL SUMMARY HANDLER
     // -------------------------------------------------------------------------
-    /**
-     * Computes and displays a summary of all employees' payroll data:
-     * total employee count, total gross pay, total deductions, and
-     * average net pay. Validation ensures the computation only runs
-     * when employee data has actually been loaded.
-     */
+    // Computes and shows a summary of all employees' payroll: total
+    // employee count, total gross pay, total deductions, and the
+    // average monthly net pay per employee.
     private static void handleGenerateSummary() {
         setStatus("Generating summary…", AppConstants.CLR_MUTED);
 

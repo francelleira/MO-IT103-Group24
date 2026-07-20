@@ -8,16 +8,15 @@ import java.awt.event.*;
 /**
  * EmployeePanel
  *
- * Builds and owns the Employee Lookup screen that is shown after a
- * successful employee login. The screen allows a user to enter their
- * employee number and view their basic personal details.
+ * Builds the Employee Lookup screen shown after an "employee" login.
+ * Lets the logged-in employee type in their employee number to view
+ * their own details or their own payslip.
  */
 public class EmployeePanel {
 
-    // ─── Prevent instantiation ────────────────────────────────────────────────
     private EmployeePanel() {}
 
-    // ─── Component references ─────────────────────────────────────────────────
+    // Component references
     private static JTextField txtEmpNum;
     private static JTextArea  areaResult;
 
@@ -29,7 +28,7 @@ public class EmployeePanel {
         outer.setBackground(AppConstants.CLR_BG);
         outer.setBorder(new EmptyBorder(28, 36, 28, 36));
 
-        // ── Header row ────────────────────────────────────────────────────────
+        // Header row
         JPanel headerRow = new JPanel(new BorderLayout());
         headerRow.setBackground(AppConstants.CLR_BG);
         headerRow.add(
@@ -47,7 +46,7 @@ public class EmployeePanel {
 
         outer.add(headerRow, BorderLayout.NORTH);
 
-        // ── Form card ─────────────────────────────────────────────────────────
+        // Form card
         JPanel formCard = UIComponents.card(new GridBagLayout());
         GridBagConstraints gc = new GridBagConstraints();
         gc.fill    = GridBagConstraints.HORIZONTAL;
@@ -61,7 +60,7 @@ public class EmployeePanel {
         JButton btnPayslip = UIComponents.ghostBtn("View Payslip");
         JButton btnClear   = UIComponents.ghostBtn("Clear");
 
-        // ── Event handling ────────────────────────────────────────────────────
+        // Event handling
         btnSearch.addActionListener(e -> handleLookup());
         txtEmpNum.addActionListener(e -> handleLookup()); // Enter key shortcut
         btnPayslip.addActionListener(e -> handleViewPayslip());
@@ -87,7 +86,7 @@ public class EmployeePanel {
         gc.insets = new Insets(12, 0, 0, 0);
         formCard.add(btnRow, gc);
 
-        // ── Result area ───────────────────────────────────────────────────────
+        // Result area
         areaResult = UIComponents.resultArea();
         JScrollPane sp = UIComponents.scrollPane(areaResult);
 
@@ -104,17 +103,8 @@ public class EmployeePanel {
 
     // EVENT HANDLER
     // -------------------------------------------------------------------------
-    /**
-     * Validates the entered employee number and displays the matching
-     * employee's details if found.
-     *
-     * Exception handling:
-     *   - Empty field           → IllegalArgumentException
-     *   - Non-numeric input     → NumberFormatException
-     *   - Employee not found    → IllegalArgumentException
-     * All exceptions show a modal error dialog via UIComponents.showError
-     * so the program never crashes on invalid input.
-     */
+    // Checks the entered employee number and, if it's valid and found,
+    // shows that employee's details.
     private static void handleLookup() {
         try {
             String raw = txtEmpNum.getText().trim();
@@ -172,12 +162,7 @@ public class EmployeePanel {
 
     // VIEW PAYSLIP HANDLER
     // -------------------------------------------------------------------------
-    /**
-     * Lets the logged-in employee view their own payslip. Validates the
-     * Employee Number the same way handleLookup() does, then asks for a
-     * pay coverage period and displays the computed payslip in the
-     * read-only result area.
-     */
+    // Lets the logged-in employee view their own payslip.
     private static void handleViewPayslip() {
         try {
             String raw = txtEmpNum.getText().trim();
@@ -234,7 +219,7 @@ public class EmployeePanel {
 
     // HELPER
     // -------------------------------------------------------------------------
-    /** Strips surrounding quotes and whitespace from a CSV field for display. */
+    // Strips surrounding quotes and whitespace from a CSV field for display.
     private static String safe(String[] row, int col) {
         if (col >= row.length || row[col] == null) return "";
         return row[col].replace("\"", "").trim();

@@ -6,12 +6,12 @@ import java.awt.*;
 /**
  * MainFrame
  *
- * Creates the application's single JFrame, sets up the CardLayout
- * container, and wires together all screen panels.
+ * Creates the one and only application window, sets up the CardLayout
+ * that switches between screens, and adds every screen (Login,
+ * Employee, Payroll, Admin) to it.
  */
 public class MainFrame {
 
-    // Prevent instantiation
     private MainFrame() {}
 
     // Named keys for the CardLayout
@@ -22,10 +22,8 @@ public class MainFrame {
 
     // FRAME BUILDER
     // -------------------------------------------------------------------------
-    /**
-     * Constructs the JFrame, populates it with all screen panels,
-     * and makes it visible.
-     */
+    // Constructs the JFrame, populates it with all screen panels,
+    // and makes it visible.
     public static void build() {
         JFrame frame = new JFrame("MotorPH Payroll Portal");
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);

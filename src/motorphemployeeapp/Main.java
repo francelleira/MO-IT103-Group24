@@ -8,13 +8,9 @@ import javax.swing.*;
  * Application entry point. Its sole responsibility is to:
  *   1. Load the CSV data files into memory via DataStore.
  *   2. Schedule the GUI construction on the Event Dispatch Thread (EDT).
- *
- * All business logic lives in the service classes.
- * All GUI construction lives in the panel and frame classes.
  */
 public class Main {
 
-    // ─── Prevent instantiation ────────────────────────────────────────────────
     private Main() {}
 
     // PROGRAM ENTRY POINT

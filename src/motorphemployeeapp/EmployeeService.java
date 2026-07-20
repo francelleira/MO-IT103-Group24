@@ -6,7 +6,8 @@ import java.util.ArrayList;
 /**
  * EmployeeService
  *
- * Provides all employee-related query and file-write operations.
+ * Handles everything related to individual employees: looking them up,
+ * adding, updating, and deleting them.
  */
 public class EmployeeService {
 
@@ -14,6 +15,8 @@ public class EmployeeService {
 
     // QUERY METHODS
     // -------------------------------------------------------------------------
+    // Finds and returns one employee's row by employee number, or null
+    // if no employee with that number exists.
     public static String[] findEmployee(String empNum) {
         ArrayList<String[]> data = DataStore.getEmployeeData();
         for (String[] row : data) {
@@ -24,10 +27,12 @@ public class EmployeeService {
         return null;
     }
 
+    // True if an employee with this number exists.
     public static boolean employeeExists(String empNum) {
         return findEmployee(empNum) != null;
     }
 
+    // Returns the hourly rate for one employee, or 0 if not found/invalid.
     public static double getHourlyRate(String empNum) {
         String[] row = findEmployee(empNum);
         if (row == null) return 0;
@@ -39,6 +44,7 @@ public class EmployeeService {
         }
     }
 
+    // Returns the employee number of every loaded employee.
     public static ArrayList<String> getAllEmployeeNumbers() {
         ArrayList<String[]> data    = DataStore.getEmployeeData();
         ArrayList<String>   empNums = new ArrayList<>();
@@ -48,11 +54,8 @@ public class EmployeeService {
         return empNums;
     }
 
-    /**
-     * Returns the next sequential employee number.
-     * Finds the maximum numeric employee number in the data store
-     * and returns max + 1. If no employees exist, returns 10001.
-     */
+    // Returns the next sequential employee number: the highest existing
+    // employee number, plus 1. Returns 10001 if there are no employees yet.
     public static String getNextEmployeeNumber() {
         ArrayList<String[]> data = DataStore.getEmployeeData();
         int maxNum = 10000; // starting base; next will be 10001
@@ -71,6 +74,7 @@ public class EmployeeService {
 
     // ADD NEW EMPLOYEE
     // -------------------------------------------------------------------------
+    // Validates a new employee row, then saves it to the CSV file.
     public static void addEmployee(String[] row) throws IllegalArgumentException, IOException {
         if (row.length != AppConstants.TOTAL_COLUMNS) {
             throw new IllegalArgumentException(
@@ -106,6 +110,8 @@ public class EmployeeService {
 
     // UPDATE EXISTING EMPLOYEE
     // -------------------------------------------------------------------------
+    // Validates the changes, then replaces the matching row and saves the
+    // whole file back to disk.
     public static void updateEmployee(String[] row) throws IllegalArgumentException, IOException {
         String empNum = row[AppConstants.COL_EMP_NUM].trim();
 
@@ -141,6 +147,7 @@ public class EmployeeService {
 
     // DELETE EMPLOYEE
     // -------------------------------------------------------------------------
+    // Removes the matching employee row and saves the whole file back to disk.
     public static void deleteEmployee(String empNum) throws IllegalArgumentException, IOException {
         if (!employeeExists(empNum)) {
             throw new IllegalArgumentException(
@@ -161,10 +168,7 @@ public class EmployeeService {
 
     // HELPER
     // -------------------------------------------------------------------------
-    /**
-     * Validates that the given field string is a non-negative number.
-     * Empty strings are allowed (treated as 0).
-     */
+    // Validates that the given field string is a non-negative number.
     private static void validateNumericField(String value, String fieldName)
             throws IllegalArgumentException {
         String cleaned = value.replace("\"", "").replace(",", "").trim();

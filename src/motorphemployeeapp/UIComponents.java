@@ -7,24 +7,17 @@ import java.awt.*;
 /**
  * UIComponents
  *
- * A factory class that creates pre-styled Swing components using the
- * palette and fonts defined in AppConstants. Every panel that builds
- * its own UI calls these methods instead of configuring components
- * from scratch, ensuring a visually consistent application.
+ * A set of methods that build ready-to-use,
+ * consistently styled Swing components (labels, fields, buttons, cards,
+ * etc.) using the colors and fonts from AppConstants.
  */
 public class UIComponents {
 
-    // ─── Prevent instantiation ────────────────────────────────────────────────
     private UIComponents() {}
 
     // LABEL
     // -------------------------------------------------------------------------
-    /**
-     * Creates a muted, bold field label.
-     *
-     * @param text  Label text.
-     * @return      Styled JLabel.
-     */
+    // Creates a muted, bold field label.
     public static JLabel label(String text) {
         JLabel l = new JLabel(text);
         l.setFont(AppConstants.FONT_LABEL);
@@ -34,11 +27,7 @@ public class UIComponents {
 
     // INPUT FIELDS
     // -------------------------------------------------------------------------
-    /**
-     * Creates a styled single-line text input field.
-     *
-     * @return  Themed JTextField.
-     */
+    // Creates a styled single-line text input field.
     public static JTextField inputField() {
         JTextField f = new JTextField();
         f.setFont(AppConstants.FONT_INPUT);
@@ -46,17 +35,13 @@ public class UIComponents {
         f.setForeground(AppConstants.CLR_TEXT);
         f.setCaretColor(AppConstants.CLR_ACCENT);
         f.setBorder(BorderFactory.createCompoundBorder(
-            new LineBorder(AppConstants.CLR_BORDER, 1, true),
-            new EmptyBorder(6, 10, 6, 10)));
+                new LineBorder(AppConstants.CLR_BORDER, 1, true),
+                new EmptyBorder(6, 10, 6, 10)));
         f.setPreferredSize(new Dimension(0, 36));
         return f;
     }
 
-    /**
-     * Creates a styled password input field.
-     *
-     * @return  Themed JPasswordField.
-     */
+    // Creates a styled password input field.
     public static JPasswordField passwordField() {
         JPasswordField f = new JPasswordField();
         f.setFont(AppConstants.FONT_INPUT);
@@ -64,21 +49,16 @@ public class UIComponents {
         f.setForeground(AppConstants.CLR_TEXT);
         f.setCaretColor(AppConstants.CLR_ACCENT);
         f.setBorder(BorderFactory.createCompoundBorder(
-            new LineBorder(AppConstants.CLR_BORDER, 1, true),
-            new EmptyBorder(6, 10, 6, 10)));
+                new LineBorder(AppConstants.CLR_BORDER, 1, true),
+                new EmptyBorder(6, 10, 6, 10)));
         f.setPreferredSize(new Dimension(0, 36));
         return f;
     }
 
     // BUTTONS
     // -------------------------------------------------------------------------
-    /**
-     * Creates an action button with a rounded
-     * custom-painted background that responds to hover and press states.
-     *
-     * @param text  Button label text.
-     * @return      Themed primary JButton.
-     */
+    // Creates an action button with a rounded
+    // custom-painted background that responds to hover and press states.
     public static JButton primaryBtn(String text) {
         JButton b = new JButton(text) {
             @Override
@@ -135,12 +115,7 @@ public class UIComponents {
         return b;
     }
 
-    /**
-     * Creates a ghost (outline-only) secondary button.
-     *
-     * @param text  Button label text.
-     * @return      Themed ghost JButton.
-     */
+    // Creates a ghost (outline-only) secondary button.
     public static JButton ghostBtn(String text) {
         JButton b = new JButton(text) {
             @Override
@@ -199,30 +174,19 @@ public class UIComponents {
 
     // CONTAINERS
     // -------------------------------------------------------------------------
-    /**
-     * Creates a card-style panel with a surface background colour,
-     * a subtle border, and internal padding.
-     *
-     * @param layout  The LayoutManager to apply.
-     * @return        Styled card JPanel.
-     */
+    // Creates a card-style panel with a surface background color,
+    // a subtle border, and internal padding.
     public static JPanel card(LayoutManager layout) {
         JPanel p = new JPanel(layout);
         p.setBackground(AppConstants.CLR_SURFACE);
         p.setBorder(BorderFactory.createCompoundBorder(
-            new LineBorder(AppConstants.CLR_BORDER, 1, true),
-            new EmptyBorder(20, 24, 20, 24)));
+                new LineBorder(AppConstants.CLR_BORDER, 1, true),
+                new EmptyBorder(20, 24, 20, 24)));
         return p;
     }
 
-    /**
-     * Builds a section header panel containing a title, a subtitle line,
-     * and a short amber accent bar underneath the title.
-     *
-     * @param title     Large heading text.
-     * @param subtitle  Smaller descriptive text shown below the title.
-     * @return          Composed header JPanel.
-     */
+    // Builds a section header panel containing a title, a subtitle line,
+    // and a short amber accent bar underneath the title.
     public static JPanel sectionHeader(String title, String subtitle) {
         JPanel p = new JPanel(new BorderLayout(0, 2));
         p.setBackground(AppConstants.CLR_BG);
@@ -253,12 +217,8 @@ public class UIComponents {
 
     // OUTPUT AREA
     // -------------------------------------------------------------------------
-    /**
-     * Creates a non-editable monospaced text area suitable for
-     * displaying formatted payroll reports.
-     *
-     * @return  Themed JTextArea.
-     */
+    // Creates a non-editable monospaced text area suitable for
+    // displaying formatted payroll reports.
     public static JTextArea resultArea() {
         JTextArea a = new JTextArea();
         a.setFont(AppConstants.FONT_MONO);
@@ -272,12 +232,7 @@ public class UIComponents {
         return a;
     }
 
-    /**
-     * Wraps a component in a themed JScrollPane.
-     *
-     * @param content  The component to scroll.
-     * @return         Themed JScrollPane.
-     */
+    // Wraps a component in a themed JScrollPane.
     public static JScrollPane scrollPane(JComponent content) {
         JScrollPane sp = new JScrollPane(content);
         sp.setBackground(AppConstants.CLR_BG);
@@ -289,26 +244,15 @@ public class UIComponents {
 
     // DIALOG HELPERS
     // -------------------------------------------------------------------------
-    /**
-     * Shows a modal error dialog.
-     *
-     * @param parent   Parent component (may be null).
-     * @param message  Error message text.
-     */
+    // Shows a modal error dialog.
     public static void showError(Component parent, String message) {
         JOptionPane.showMessageDialog(
-            parent, message, "Input Error", JOptionPane.ERROR_MESSAGE);
+                parent, message, "Input Error", JOptionPane.ERROR_MESSAGE);
     }
 
-    /**
-     * Shows a modal informational dialog.
-     *
-     * @param parent   Parent component (may be null).
-     * @param title    Dialog title.
-     * @param message  Message text.
-     */
+    // Shows a modal informational dialog.
     public static void showInfo(Component parent, String title, String message) {
         JOptionPane.showMessageDialog(
-            parent, message, title, JOptionPane.INFORMATION_MESSAGE);
+                parent, message, title, JOptionPane.INFORMATION_MESSAGE);
     }
 }

@@ -6,14 +6,16 @@ import java.util.ArrayList;
 /**
  * PayrollService
  *
- * Performs every monetary calculation needed to produce a payslip.
- * Returns computed results and formatted text.
+ * This class does all the payroll math: gross pay, SSS, PhilHealth,
+ * Pag-IBIG, tax, total deductions, and net pay. It also builds the
+ * text shown on screen, writes the payroll CSV file, and creates the
+ * payroll summary.
  */
 public class PayrollService {
 
     private PayrollService() {}
 
-    // Inner record class
+    // Simple holder for one payroll line (one cutoff period for one employee).
     // -------------------------------------------------------------------------
     public static class PayrollRecord {
         public String empNum;
@@ -32,17 +34,21 @@ public class PayrollService {
 
     // GROSS SALARY
     // -------------------------------------------------------------------------
+    // Gross pay for one cutoff = hours worked x hourly rate.
     public static double calculateGrossSalary(String empNum, double hoursWorked) {
         double hourlyRate = EmployeeService.getHourlyRate(empNum);
         return hoursWorked * hourlyRate;
     }
 
+    // Monthly gross pay = the 1st cutoff gross + the 2nd cutoff gross.
     public static double calculateMonthlyGross(double firstGross, double secondGross) {
         return firstGross + secondGross;
     }
 
     // MANDATORY DEDUCTIONS
     // -------------------------------------------------------------------------
+    // Looks up the SSS contribution for the given monthly gross pay,
+    // using the standard SSS contribution bracket table.
     public static double computeSSS(double monthlyGross) {
         if (monthlyGross < 3250)  return 135.00;
         if (monthlyGross >= 24750) return 1125.00;
@@ -50,11 +56,15 @@ public class PayrollService {
         return 157.5 + (bracket * 22.5);
     }
 
+    // PhilHealth premium is 3% of monthly gross (capped at 1800), split
+    // evenly between employee and employer, so the employee pays half.
     public static double computePhilHealth(double monthlyGross) {
         double totalPremium = Math.min(monthlyGross * 0.03, 1800.00);
         return totalPremium / 2;
     }
 
+    // Pag-IBIG is 1% of monthly gross for the 1000-1500 range, otherwise 2%,
+    // capped at a maximum contribution of 100.
     public static double computePagIBIG(double monthlyGross) {
         double contribution;
         if (monthlyGross >= 1000 && monthlyGross <= 1500) {
@@ -65,6 +75,8 @@ public class PayrollService {
         return Math.min(contribution, 100.00);
     }
 
+    // Taxable income = monthly gross minus the SSS, PhilHealth and Pag-IBIG
+    // contributions.
     public static double computeTaxableIncome(double monthlyGross,
                                               double sss,
                                               double philHealth,
@@ -72,6 +84,7 @@ public class PayrollService {
         return monthlyGross - (sss + philHealth + pagIBIG);
     }
 
+    // Withholding tax, using the standard BIR tax brackets.
     public static double computeTax(double taxableIncome) {
         if (taxableIncome <= 20832)   return 0;
         else if (taxableIncome <= 33333)  return (taxableIncome - 20833) * 0.20;
@@ -81,12 +94,15 @@ public class PayrollService {
         else                              return 200833.33 + (taxableIncome - 666667) * 0.35;
     }
 
+    // Adds up all four deductions into one total.
     public static double computeDeductions(double sss, double philHealth, double pagIBIG, double tax) {
         return sss + philHealth + pagIBIG + tax;
     }
 
-    // FORMATTED REPORT (for on-screen display)
+    // FORMATTED REPORT
     // -------------------------------------------------------------------------
+    // Builds the printable payroll report text for one employee, covering
+    // either a single month (monthPairIdx 0-6) or all months (-1).
     public static String buildPayrollText(String empNum, int monthPairIdx) throws Exception {
         String[] emp = EmployeeService.findEmployee(empNum);
         if (emp == null) return "Employee " + empNum + " not found.\n\n";
@@ -157,19 +173,8 @@ public class PayrollService {
 
     // CSV EXPORT
     // -------------------------------------------------------------------------
-    /**
-     * Computes payroll for the given employee(s) and writes / appends
-     * a CSV file with the standard payroll fields.
-     *
-     * Deduction rule:
-     *   - 1st cutoff of every month: SSS, PhilHealth, Pag-IBIG, Tax, Total Deductions = 0.
-     *   - 2nd cutoff of every month: full deductions applied.
-     *
-     * @param empNum       Employee number, or null / empty to process all employees.
-     * @param monthPairIdx Month index (0-based), or -1 for all months.
-     * @param outputPath   File path for the output CSV.
-     * @throws Exception if computation or file write fails.
-     */
+    // Computes payroll for one employee (or all employees) and saves the
+    // results as a CSV file.
     public static void writePayrollCsv(String empNum, int monthPairIdx, String outputPath)
             throws Exception {
 
@@ -287,27 +292,16 @@ public class PayrollService {
 
     // PAYROLL SUMMARY
     // -------------------------------------------------------------------------
-    /** Holds the aggregate figures produced by {@link #generateSummary(int)}. */
+    // Simple holder for the totals shown on the Payroll Summary screen.
     public static class PayrollSummary {
         public int    employeeCount;
         public double totalGrossPay;
         public double totalDeductions;
-        public double averageNetPay;
+        public double averageMonthlyNetPay;
     }
 
-    /**
-     * Computes payroll totals across every employee currently loaded from
-     * the CSV file, for the given month range.
-     *
-     * Reuses the same gross-pay and deduction methods used elsewhere in
-     * this class ({@link #calculateGrossSalary}, {@link #computeSSS},
-     * {@link #computePhilHealth}, {@link #computePagIBIG},
-     * {@link #computeTax}, {@link #computeDeductions}) so the summary
-     * always stays consistent with individual payslips.
-     *
-     * @param monthPairIdx  0-based month index, or -1 for all months (June–December).
-     * @throws IllegalStateException if no employee data is currently loaded.
-     */
+    //Adds up payroll totals for every employee currently loaded, for the
+    // given month range, and returns them as a PayrollSummary.
     public static PayrollSummary generateSummary(int monthPairIdx) throws Exception {
         ArrayList<String> allNums = EmployeeService.getAllEmployeeNumbers();
 
@@ -347,32 +341,37 @@ public class PayrollService {
                 double totalDed = computeDeductions(sss, ph, pi, tax);
                 double net2     = g2 - totalDed;
 
-                // 1st cutoff has no deductions; 2nd cutoff carries full deductions,
-                // matching the rule already used by buildPayrollText/writePayrollCsv.
+                // 1st cutoff has no deductions; 2nd cutoff carries full deductions
                 totalGross      += (g1 + g2);
                 totalDeductions += totalDed;
                 totalNet        += (g1 + net2);
             }
         }
 
+        // Number of months covered by this summary
+        int monthsCovered = (endI - startI) / 2 + 1;
+
+        // Total employee-months = number of employees x number of months.
+        int totalEmployeeMonths = allNums.size() * monthsCovered;
+
         PayrollSummary summary = new PayrollSummary();
-        summary.employeeCount   = allNums.size();
-        summary.totalGrossPay   = totalGross;
-        summary.totalDeductions = totalDeductions;
-        summary.averageNetPay   = totalNet / allNums.size();
+        summary.employeeCount        = allNums.size();
+        summary.totalGrossPay        = totalGross;
+        summary.totalDeductions      = totalDeductions;
+        summary.averageMonthlyNetPay = totalNet / totalEmployeeMonths;
         return summary;
     }
 
-    /** Formats a {@link PayrollSummary} into a display-ready block of text. */
+    // Turns a PayrollSummary into the text block shown on screen.
     public static String buildSummaryText(PayrollSummary s) {
         StringBuilder sb = new StringBuilder();
         sb.append("╔══════════════════════════════════════════╗\n");
         sb.append(String.format("║  %-40s║%n", "PAYROLL SUMMARY"));
         sb.append("╚══════════════════════════════════════════╝\n\n");
-        sb.append(String.format("%-22s : %d%n",       "Total Employees",   s.employeeCount));
-        sb.append(String.format("%-22s : PHP %,.2f%n", "Total Gross Pay",   s.totalGrossPay));
-        sb.append(String.format("%-22s : PHP %,.2f%n", "Total Deductions",  s.totalDeductions));
-        sb.append(String.format("%-22s : PHP %,.2f%n", "Average Net Pay",   s.averageNetPay));
+        sb.append(String.format("%-22s : %d%n",       "Total Employees",       s.employeeCount));
+        sb.append(String.format("%-22s : PHP %,.2f%n", "Total Gross Pay",       s.totalGrossPay));
+        sb.append(String.format("%-22s : PHP %,.2f%n", "Total Deductions",      s.totalDeductions));
+        sb.append(String.format("%-22s : PHP %,.2f%n", "Avg. Monthly Net Pay",  s.averageMonthlyNetPay));
         return sb.toString();
     }
 }

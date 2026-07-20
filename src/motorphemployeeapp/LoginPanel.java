@@ -8,9 +8,9 @@ import java.awt.event.*;
 /**
  * LoginPanel
  *
- * Builds and owns the Login screen. When credentials are verified it
- * asks MainFrame to switch to the appropriate screen via the supplied
- * CardLayout and container reference.
+ * Builds the Login screen. Checks the username and password the user
+ * types in, and if they're correct, tells MainFrame which screen to
+ * switch to next (Employee, Payroll, or Admin).
  */
 public class LoginPanel {
 
@@ -23,6 +23,7 @@ public class LoginPanel {
     private static CardLayout cardLayout;
     private static JPanel     cardPanel;
 
+    // Builds and returns the Login screen.
     public static JPanel build(CardLayout layout, JPanel cards) {
         cardLayout = layout;
         cardPanel  = cards;
@@ -98,6 +99,9 @@ public class LoginPanel {
         return outer;
     }
 
+    // Checks the entered username/password against the three known
+    // accounts (employee, payroll_staff, admin) and switches screens
+    // if they match. Shows an error message if they don't.
     private static void handleLogin() {
         String user = txtUsername.getText().trim();
         String pass = new String(txtPassword.getPassword()).trim();
@@ -129,6 +133,7 @@ public class LoginPanel {
         }
     }
 
+    // Clears the login form and sends the user back to the login screen.
     public static void signOut() {
         if (txtUsername != null) txtUsername.setText("");
         if (txtPassword != null) txtPassword.setText("");

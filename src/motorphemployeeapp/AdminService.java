@@ -17,16 +17,12 @@ import java.util.List;
 /**
  * AdminService
  *
- * Owns every non-GUI concern of the Admin/HR screen:
- *   - Preparing employee data for display in the JTable.
- *   - Full field-level validation for the Add/Edit employee forms.
- *   - CRUD orchestration (delegates persistence to EmployeeService/DataStore).
- *   - Employee-number lookup used by the "Edit Record" flow.
- *   - The CSV file-watcher that triggers dynamic table refresh.
- *
- * AdminPanel (the view) never talks to DataStore or EmployeeService
- * directly for a write operation — it always goes through this class,
- * which keeps validation and data-handling rules in a single place.
+ * Handles everything the Admin screen needs that isn't Swing/GUI code:
+ *   - Preparing employee rows for the table.
+ *   - Validating every field on the Add/Edit forms.
+ *   - Adding, updating, and deleting employees (through EmployeeService).
+ *   - Looking up an employee number for the "Edit Record" flow.
+ *   - Watching the CSV file so the table refreshes if it changes on disk.
  */
 public class AdminService {
 
@@ -61,7 +57,7 @@ public class AdminService {
 
     // TABLE DATA
     // -------------------------------------------------------------------------
-    /** Builds the display rows (one String[] per employee) used by the JTable model. */
+    // Builds one display row per employee.
     public static ArrayList<String[]> getDisplayRows() {
         ArrayList<String[]> data = DataStore.getEmployeeData();
         ArrayList<String[]> displayRows = new ArrayList<>();
@@ -77,25 +73,19 @@ public class AdminService {
         return displayRows;
     }
 
-    /** True once at least one employee row has been loaded from the CSV file. */
+    // True once at least one employee has been loaded from the CSV file.
     public static boolean isEmployeeDataLoaded() {
         return !DataStore.getEmployeeData().isEmpty();
     }
 
+    // Returns the next auto-generated employee number.
     public static String getNextEmployeeNumber() {
         return EmployeeService.getNextEmployeeNumber();
     }
 
     // LOOKUP FOR THE "EDIT RECORD" NUMBER-ENTRY FLOW
     // -------------------------------------------------------------------------
-    /**
-     * Validates a typed-in Employee Number and returns the matching row.
-     * Used by the Edit Record number-entry panel, since the admin is no
-     * longer required to select a row in the table first.
-     *
-     * @throws IllegalArgumentException if the number is missing, malformed,
-     *                                   or does not match any employee.
-     */
+    // Checks a typed-in Employee Number and returns the matching row.
     public static String[] findEmployeeForEdit(String rawEmpNum) throws IllegalArgumentException {
         if (rawEmpNum == null || rawEmpNum.trim().isEmpty()) {
             throw new IllegalArgumentException("Employee Number cannot be empty.");
@@ -119,34 +109,29 @@ public class AdminService {
         return row;
     }
 
-    // CRUD OPERATIONS (validate everything, then delegate persistence)
+    // CRUD OPERATIONS
     // -------------------------------------------------------------------------
+    // Validates a new employee's data, then saves it.
     public static void addEmployee(String[] row) throws IllegalArgumentException, IOException {
         validateEmployeeRow(row, true);
         EmployeeService.addEmployee(row);
     }
 
+    // Validates an existing employee's edited data, then saves it.
     public static void updateEmployee(String[] row) throws IllegalArgumentException, IOException {
         validateEmployeeRow(row, false);
         EmployeeService.updateEmployee(row);
     }
 
+    // Deletes an employee by employee number.
     public static void deleteEmployee(String empNum) throws IllegalArgumentException, IOException {
         EmployeeService.deleteEmployee(empNum);
     }
 
     // FULL FIELD-LEVEL VALIDATION
     // -------------------------------------------------------------------------
-    /**
-     * Validates every field of an employee row and collects every problem
-     * found instead of stopping at the first one, so the admin can see and
-     * fix everything in a single pass.
-     *
-     * @param row    19-element employee field array.
-     * @param isNew  true when adding a new employee (Employee # must be
-     *               unique); false when editing (Employee # must already exist).
-     * @throws IllegalArgumentException listing every validation failure found.
-     */
+    // Checks every field of an employee row and collects every problem
+    // found, instead of stopping at the first one.
     public static void validateEmployeeRow(String[] row, boolean isNew) throws IllegalArgumentException {
         if (row == null || row.length != AppConstants.TOTAL_COLUMNS) {
             throw new IllegalArgumentException("Employee record is incomplete or malformed.");
@@ -232,6 +217,8 @@ public class AdminService {
 
     // FIELD-LEVEL VALIDATION HELPERS
     // -------------------------------------------------------------------------
+    // Checks that a name field isn't empty and only has letters/accents/
+    // spaces/basic punctuation.
     private static void checkName(String value, String fieldName, List<String> errors) {
         String v = safeTrim(value);
         if (v.isEmpty()) {
@@ -241,6 +228,8 @@ public class AdminService {
         }
     }
 
+    // Checks that the birthday is a real MM/DD/YYYY date, not in the future,
+    // not more than 100 years old, and belongs to someone at least 18.
     private static void checkBirthday(String value, List<String> errors) {
         String v = safeTrim(value);
         if (v.isEmpty()) {
@@ -261,6 +250,7 @@ public class AdminService {
         }
     }
 
+    // Checks that the phone number isn't empty and matches NNN-NNN-NNN(N).
     private static void checkPhone(String value, List<String> errors) {
         String v = safeTrim(value);
         if (v.isEmpty()) {
@@ -270,6 +260,8 @@ public class AdminService {
         }
     }
 
+    // Generic check: field must not be empty and must match the given
+    // regular expression (used for SSS #, PhilHealth #, TIN #, Pag-IBIG #).
     private static void checkPattern(String value, String fieldName, String pattern,
                                      String hint, List<String> errors) {
         String v = safeTrim(value);
@@ -280,6 +272,8 @@ public class AdminService {
         }
     }
 
+    // Checks that a money field is a valid, non-negative number.
+    // If the field isn't required, an empty value is allowed.
     private static void checkMoney(String value, String fieldName, boolean required, List<String> errors) {
         String cleaned = safeTrim(value).replace(",", "");
         if (cleaned.isEmpty()) {
@@ -296,27 +290,25 @@ public class AdminService {
         }
     }
 
+    // Trims a string and strips stray quote characters, treating null as "".
     private static String safeTrim(String v) {
         return (v == null) ? "" : v.replace("\"", "").trim();
     }
 
+    // Reads one row's column safely, returning "" if the column is out of range.
     private static String safeGet(String[] row, int col) {
         if (col >= row.length) return "";
         return safeTrim(row[col]);
     }
 
-    // FILE WATCHER (dynamic table refresh whenever the CSV changes on disk)
+    // FILE WATCHER
     // -------------------------------------------------------------------------
     private static Thread watchThread;
 
     /**
-     * Starts a background watcher that reloads the employee CSV and invokes
-     * {@code onChange} whenever the file is modified on disk.
-     *
-     * @param onChange  Callback run after the in-memory data is reloaded
-     *                   (e.g. AdminPanel::refreshTable). Safe to call from
-     *                   any thread; the callback is responsible for
-     *                   dispatching to the EDT if it touches Swing components.
+     * Starts a background thread that watches the employee CSV file. Any
+     * time it changes on disk, the thread reloads it into memory and runs
+     * onChange so the screen can refresh.
      */
     public static void startFileWatcher(Runnable onChange) {
         stopFileWatcher();
@@ -357,6 +349,7 @@ public class AdminService {
         watchThread.start();
     }
 
+    // Stops the background file-watcher thread, if it's running.
     public static void stopFileWatcher() {
         if (watchThread != null && watchThread.isAlive()) {
             watchThread.interrupt();

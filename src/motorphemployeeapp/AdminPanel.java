@@ -10,21 +10,10 @@ import java.util.ArrayList;
 /**
  * AdminPanel
  *
- * HR/Admin screen with:
- *   - Full-screen JTable of employee records.
- *   - "Add Employee" button in the header row (left of Sign Out).
- *   - "Edit Record" button in the header row — always clickable. Clicking
- *     it opens a small number-entry panel where the admin types the
- *     Employee Number to edit; once validated, the full edit form loads.
- *   - Add-Employee form panel (CardLayout overlay, not below the table).
- *   - Edit-Employee form panel with Save Changes, Delete Record, Clear Form, Back.
- *   - Dynamic table refresh via a CSV file watcher.
- *   - Auto-generated sequential employee numbers.
- *   - Full input validation with JOptionPane error dialogs.
- *
- * All business logic (validation, CRUD orchestration, table-data
- * preparation, file watching) lives in {@link AdminService}. This class
- * is responsible only for building the Swing UI and wiring events to it.
+ * Builds the Admin/HR screen. It shows a table of all employees and
+ * lets the admin add a new employee, edit an existing one, or delete
+ * one. The screen switches between four views (table, add form, edit
+ * lookup, edit form) using a CardLayout.
  */
 public class AdminPanel {
 
@@ -49,9 +38,8 @@ public class AdminPanel {
     private static JButton btnAddEmployee;
     private static JButton btnEditRecord;
 
-    // Remembers the last row selected in the table, purely as a convenience
-    // to pre-fill the Edit Record number-entry field. Selection no longer
-    // gates whether Edit Record can be clicked.
+    // Remembers the last row selected in the table, just so the Edit Record
+    // number field can be pre-filled as a convenience.
     private static String selectedEmpNum;
 
     // Edit-lookup form field
@@ -101,16 +89,18 @@ public class AdminPanel {
 
     // PANEL BUILDER
     // -------------------------------------------------------------------------
+    // Builds the whole Admin screen: the header row plus the card area
+    // that switches between the table, add form, and edit forms.
     public static JPanel build() {
-        // Top-level panel holds the header (always visible) + a card area beneath
+        // Top-level panel holds the header + a card area beneath
         JPanel outer = new JPanel(new BorderLayout(0, 0));
         outer.setBackground(AppConstants.CLR_BG);
         outer.setBorder(new EmptyBorder(20, 28, 20, 28));
 
-        // -- Shared header row --
+        // Shared header row
         outer.add(buildHeaderRow(), BorderLayout.NORTH);
 
-        // -- Main card area switches between table and form panels --
+        // Main card area switches between table and form panels
         mainCardLayout = new CardLayout();
         mainCardPanel  = new JPanel(mainCardLayout);
         mainCardPanel.setBackground(AppConstants.CLR_BG);
@@ -131,8 +121,10 @@ public class AdminPanel {
         return outer;
     }
 
-    // HEADER ROW (always visible above both table and forms)
+    // HEADER ROW
     // -------------------------------------------------------------------------
+    // Builds the top row with the title on the left and the Add Employee /
+    // Edit Record / Sign Out buttons on the right.
     private static JPanel buildHeaderRow() {
         JPanel headerRow = new JPanel(new BorderLayout());
         headerRow.setBackground(AppConstants.CLR_BG);
@@ -146,8 +138,6 @@ public class AdminPanel {
         // Right side: Add Employee | Edit Record | Sign Out
         btnAddEmployee = UIComponents.primaryBtn("Add Employee");
         btnEditRecord  = UIComponents.ghostBtn("Edit Record");
-        // Edit Record is always clickable — it no longer requires a table
-        // selection. Clicking it opens the employee-number lookup panel.
 
         JButton btnSignOut = UIComponents.ghostBtn("Sign Out");
         btnSignOut.addActionListener(e -> {
@@ -170,6 +160,7 @@ public class AdminPanel {
 
     // TABLE CARD
     // -------------------------------------------------------------------------
+    // Builds the scrollable table that lists every employee record.
     private static JPanel buildTableCard() {
         JPanel tableCard = new JPanel(new BorderLayout());
         tableCard.setBackground(AppConstants.CLR_BG);
@@ -210,6 +201,7 @@ public class AdminPanel {
 
     // ADD EMPLOYEE FORM CARD
     // -------------------------------------------------------------------------
+    // Builds the form used to add a brand-new employee record.
     private static JPanel buildAddFormCard() {
         JPanel formCard = new JPanel(new BorderLayout(0, 0));
         formCard.setBackground(AppConstants.CLR_BG);
@@ -277,11 +269,7 @@ public class AdminPanel {
 
     // EDIT-RECORD NUMBER-ENTRY LOOKUP CARD
     // -------------------------------------------------------------------------
-    /**
-     * Small panel shown when Edit Record is clicked. The admin types the
-     * Employee Number to edit here; once validated, the full Edit form
-     * is populated and shown.
-     */
+    // Small panel shown when Edit Record is clicked.
     private static JPanel buildEditLookupCard() {
         JPanel outer = new JPanel(new GridBagLayout());
         outer.setBackground(AppConstants.CLR_BG);
@@ -329,6 +317,7 @@ public class AdminPanel {
 
     // EDIT EMPLOYEE FORM CARD
     // -------------------------------------------------------------------------
+    // Builds the form used to edit, save, or delete an existing employee.
     private static JPanel buildEditFormCard() {
         JPanel formCard = new JPanel(new BorderLayout(0, 0));
         formCard.setBackground(AppConstants.CLR_BG);
@@ -399,39 +388,32 @@ public class AdminPanel {
     // NAVIGATION HELPERS
     // -------------------------------------------------------------------------
 
-    /** Switch to the table view. */
+    // Switch back to the table view and bring back the header buttons.
     private static void showTableView() {
-        btnAddEmployee.setEnabled(true);
-        btnEditRecord.setEnabled(true);
+        btnAddEmployee.setVisible(true);
+        btnEditRecord.setVisible(true);
         mainCardLayout.show(mainCardPanel, CARD_TABLE);
     }
 
-    /** Switch to the Add Employee form, pre-filling the auto-generated employee number. */
+     // Switch to the Add Employee form, pre-filling the auto-generated
+     // employee number.
     private static void showAddForm() {
         clearAddForm();
         addTxtEmpNum.setText(AdminService.getNextEmployeeNumber());
-        btnAddEmployee.setEnabled(false);
-        btnEditRecord.setEnabled(false);
+        btnAddEmployee.setVisible(false);
+        btnEditRecord.setVisible(false);
         mainCardLayout.show(mainCardPanel, CARD_ADD_FORM);
     }
 
-    /**
-     * Switch to the Edit Record number-entry lookup panel. Edit Record is
-     * always clickable; if a row happens to be selected in the table, its
-     * Employee Number is pre-filled as a convenience, but the admin can
-     * type any number.
-     */
+    //Switch to the Edit Record number-entry lookup panel.
     private static void showEditLookupForm() {
         editLookupTxtEmpNum.setText(selectedEmpNum != null ? selectedEmpNum : "");
-        btnAddEmployee.setEnabled(false);
-        btnEditRecord.setEnabled(false);
+        btnAddEmployee.setVisible(false);
+        btnEditRecord.setVisible(false);
         mainCardLayout.show(mainCardPanel, CARD_EDIT_LOOKUP);
     }
 
-    /**
-     * Validates the employee number typed into the lookup panel and, if
-     * found, loads the full Edit form pre-populated with that employee's data.
-     */
+    // Checks the employee number typed into the lookup panel.
     private static void handleEditLookupContinue() {
         try {
             String[] row = AdminService.findEmployeeForEdit(editLookupTxtEmpNum.getText());
@@ -444,6 +426,8 @@ public class AdminPanel {
 
     // ADD EMPLOYEE HANDLER
     // -------------------------------------------------------------------------
+    // Runs when "Add Employee" is clicked on the add form. Reads the form,
+    // saves the new employee, then resets the form for the next entry.
     private static void handleAddEmployee() {
         String[] row = buildRowFromAddForm();
 
@@ -466,6 +450,8 @@ public class AdminPanel {
 
     // SAVE CHANGES HANDLER
     // -------------------------------------------------------------------------
+    // Runs when "Save Changes" is clicked. Reads the edit form, saves the
+    // updated employee, refreshes the table, and returns to the table view.
     private static void handleSaveChanges() {
         String[] row = buildRowFromEditForm();
 
@@ -486,6 +472,8 @@ public class AdminPanel {
 
     // DELETE EMPLOYEE HANDLER
     // -------------------------------------------------------------------------
+    // Runs when "Delete Record" is clicked. Asks the admin to confirm,
+    // then deletes the employee and returns to the table view.
     private static void handleDeleteEmployee() {
         String empNum = editTxtEmpNum.getText().trim();
         if (empNum.isEmpty()) {
@@ -522,10 +510,7 @@ public class AdminPanel {
 
     // TABLE REFRESH
     // -------------------------------------------------------------------------
-    /**
-     * Clears and repopulates the JTable from AdminService's prepared data.
-     * Safe to call from any thread (uses SwingUtilities.invokeLater).
-     */
+    // Clears and repopulates the JTable from AdminService's prepared data.
     public static void refreshTable() {
         if (!SwingUtilities.isEventDispatchThread()) {
             SwingUtilities.invokeLater(AdminPanel::refreshTable);
@@ -560,6 +545,7 @@ public class AdminPanel {
 
     // FORM POPULATION HELPERS
     // -------------------------------------------------------------------------
+    // Fills every field in the edit form with the given employee's data.
     private static void populateEditForm(String[] row) {
         editTxtEmpNum.setText(           safeGet(row, AppConstants.COL_EMP_NUM));
         editTxtLastName.setText(         safeGet(row, AppConstants.COL_LAST_NAME));
@@ -582,6 +568,7 @@ public class AdminPanel {
         editTxtHourlyRate.setText(       safeGet(row, AppConstants.COL_HOURLY_RATE));
     }
 
+    // Empties every field on the add form.
     private static void clearAddForm() {
         addTxtEmpNum.setText("");
         addTxtLastName.setText("");
@@ -604,8 +591,9 @@ public class AdminPanel {
         addTxtHourlyRate.setText("");
     }
 
+    // Empties every editable field on the edit form, but keeps the
+    // employee number since that field cannot be changed.
     private static void clearEditForm() {
-        // Preserve the employee number (key field) -- only clear editable fields
         editTxtLastName.setText("");
         editTxtFirstName.setText("");
         editTxtBirthday.setText("");
@@ -628,6 +616,7 @@ public class AdminPanel {
 
     // ROW BUILDERS
     // -------------------------------------------------------------------------
+    // Reads every field on the add form into a single employee row array.
     private static String[] buildRowFromAddForm() {
         String[] row = new String[AppConstants.TOTAL_COLUMNS];
         row[AppConstants.COL_EMP_NUM]            = addTxtEmpNum.getText().trim();
@@ -652,6 +641,7 @@ public class AdminPanel {
         return row;
     }
 
+    // Reads every field on the edit form into a single employee row array.
     private static String[] buildRowFromEditForm() {
         String[] row = new String[AppConstants.TOTAL_COLUMNS];
         row[AppConstants.COL_EMP_NUM]            = editTxtEmpNum.getText().trim();
@@ -678,6 +668,7 @@ public class AdminPanel {
 
     // UTILITY HELPERS
     // -------------------------------------------------------------------------
+    // Adds a label + input field pair to a form panel and returns the field.
     private static JTextField addLabeledField(JPanel parent, String labelText) {
         parent.add(UIComponents.label(labelText));
         JTextField tf = UIComponents.inputField();
@@ -685,6 +676,8 @@ public class AdminPanel {
         return tf;
     }
 
+    // Reads one CSV cell safely, stripping quotes/whitespace, returning ""
+    // instead of crashing if the column doesn't exist.
     private static String safeGet(String[] row, int col) {
         if (col >= row.length) return "";
         return row[col].replace("\"", "").trim();

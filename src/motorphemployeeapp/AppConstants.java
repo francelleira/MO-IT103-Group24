@@ -5,11 +5,11 @@ import java.awt.*;
 /**
  * AppConstants
  *
- * Central repository for every constant used across the application.
+ * Holds every fixed value the app uses in one place: file names, CSV
+ * column positions, payroll cutoff dates, and the GUI colors/fonts.
  */
 public class AppConstants {
 
-    // Prevent instantiation
     private AppConstants() {}
 
     // FILE PATHS

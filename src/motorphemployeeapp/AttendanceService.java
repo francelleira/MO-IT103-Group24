@@ -9,28 +9,24 @@ import java.util.ArrayList;
 /**
  * AttendanceService
  *
- * Handles all time-and-attendance calculations using the data
- * loaded by DataStore. Contains no file I/O and no GUI code.
+ * Turns raw login/logout attendance records into payable hours worked,
+ * using the data already loaded by DataStore.
  */
 public class AttendanceService {
 
-    // ─── Prevent instantiation ────────────────────────────────────────────────
     private AttendanceService() {}
 
-    // ─── Date / time formatters (reused for every row) ───────────────────────
+    // Date / time formatters
     private static final DateTimeFormatter DATE_FORMAT = DateTimeFormatter.ofPattern("MM/dd/yyyy");
     private static final DateTimeFormatter TIME_FORMAT = DateTimeFormatter.ofPattern("H:mm");
 
-    // ─── Business-hour boundaries ─────────────────────────────────────────────
+    // Business-hour boundaries
     private static final LocalTime WORK_START  = LocalTime.of(8,  0);
     private static final LocalTime WORK_END    = LocalTime.of(17, 0);
     private static final LocalTime GRACE_LIMIT = LocalTime.of(8, 10);
 
     // HOURS CALCULATION
-    /**
-     * Totals the payable hours worked by one employee within a
-     * specified cutoff date range (inclusive on both ends).
-     */
+    // Adds up the payable hours one employee worked between two dates.
     public static double calculateHours(String empNum, String startDate, String endDate)
             throws Exception {
 
