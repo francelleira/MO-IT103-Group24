@@ -1,78 +1,63 @@
 # Group 24 - MotorPH Employee Application
 
 ## Terminal Assessment: Finalized MotorPH Employee Application
-This repository contains the source code and documentation for the MotorPH Employee Application, developed as part of the IT103 course requirements. The application streamlines employee record management, attendance tracking, and payroll processing through a role-based interface.
+This repository contains the source code and documentation for the MotorPH Employee Application, developed as part of the MO-IT103 course requirements. The application streamlines employee record management, attendance tracking, and payroll processing through a role-based interface.
+
+---
+## Features
+
+### Login System
+- Secure login page
+- Role-based access
+- Supports:
+  - Employee
+  - Payroll Staff
+  - Administrator
 
 ---
 
-## **Program details**
-The MotorPH Payroll System is a Java program that calculates employee payroll using employee information and attendance records.
-The program reads data from CSV files and performs the following tasks:
-- Displays all employee information
-- Calculates total hours worked
-- Calculates gross salary based on hourly rate
-- Calculates deductions (SSS, PhilHealth, Pag-IBIG, Tax)
-- Calculates net salary
-Payroll can be processed for one employee or all employees.
-The payroll records are calculated for cutoff periods from June to December.
+### Employee Module
+
+Employees can:
+
+- View their personal information
+- View payroll details
+- Check salary breakdown
 
 ---
 
-### **How the system works**
-**Login System**
-The program starts with a login screen where the user enters a username and password.
+### Payroll Module
 
-**Available accounts:**
-- Employee
+Payroll staff can:
 
-  Username: employee
-  
-  Password: 12345
-
-- Payroll Staff
-
-  Username: payroll_staff
-  
-  Password: 12345
-
-- Admin
-
-  Username: admin
-
-  Password: 12345
-
-**Employee Access**
-
-If the user logs in as employee, they can:
-- Enter their employee number
-- View their employee details, including:
-  - Employee Number
-  - Employee Name
-  - Birthday
-- View their payslip
-
-If the employee number does not exist, the program displays an error message.
-
-**Payroll Staff Access**
-
-If the user logs in as payroll_staff, they can:
-- Process payroll for one employee
+- Process payroll for a single employee
 - Process payroll for all employees
-- Generate payroll summary
+- Automatically calculate:
+  - Hours worked
+  - Gross salary
+  - SSS Contribution
+  - PhilHealth Contribution
+  - Pag-IBIG Contribution
+  - Withholding Tax
+  - Total Deductions
+  - Net Salary
 
-The system calculates:
-- Total Hours Worked
-- Gross Salary
-- Government Deductions
-- Net Salary
+Payroll calculations follow the MotorPH payroll rules.
 
-**Admin Access**
+---
 
-If the user logs in as admin, they can:
+### Admin Module
+
+Administrators can:
+
 - View all employee records
 - Add new employees
-- Edit existing employee records
+- Edit employee information
 - Delete employee records
+- Automatically generate employee numbers
+- Save all changes directly to the Employee CSV file
+
+---
 
 **Files Used**
 - Employee Data File: MotorPH_Employee_Details.csv
@@ -94,10 +79,24 @@ This file contains the summary of the automated payroll calculation.
 3. Open the project in your preferred Java IDE (such as IntelliJ IDEA or NetBeans).
 4. Build and run the Main.java file.
 
----
+**Available accounts:**
+- Employee
 
-## Quick Links
-Homework 1 Docs:(https://docs.google.com/spreadsheets/d/15dP33snFRs8yTzUYBFgnr9rBPT60C8DrKaGoaPqU1JM/edit?usp=sharing) 
+  Username: employee
+  
+  Password: 12345
+
+- Payroll Staff
+
+  Username: payroll_staff
+  
+  Password: 12345
+
+- Admin
+
+  Username: admin
+
+  Password: 12345
 
 ---
 
